@@ -9,57 +9,15 @@
   //
   var context = canvas.getContext('2d');
 
-  // threejs setup //
-
-  var scene = new THREE.Scene();
-
-// A semi-transparent plane to make the background fade
-  var plane = new THREE.Mesh( 
-    new THREE.PlaneGeometry( window.innerWidth, 
-                             window.innerHeight, 8,8 ), 
-    new THREE.MeshBasicMaterial( { 
-      transparent: true,
-      opacity: 0.02,
-      color: 0x000000 } ) );
-  plane.position.z = -500;
-  scene.add(plane);
-
-  var geometry = new THREE.SphereGeometry( 4, 4, 4 );
-  var material = new THREE.MeshNormalMaterial({depthTest:false});
-  
-  var partMeshes = new THREE.Group();
-  scene.add( partMeshes );
-
-  var camera = new THREE.OrthographicCamera( 
-    window.innerWidth / - 2,
-    window.innerWidth / 2,
-    window.innerHeight / 2,
-    window.innerHeight / - 2,
-    1, 1000 );
-  camera.position.z = 100;
-
-  var renderer = new THREE.WebGLRenderer(
-    { antialias: true, preserveDrawingBuffer: true } );
-  renderer.autoClear = false;
-  renderer.setSize( window.innerWidth, window.innerHeight );
-  document.body.appendChild( renderer.domElement );
-
-  //
-
-  // stores previous particle positions for
-  // smooth interpolation
-  const stateCount = 2;
-  var particleStates = [];
-  for (let i=0; i<stateCount; i++) particleStates.push([]);
-  var stateIndex = 0;
-  var lastStateUpdate = 0.0;
-  var lastStateDelta = 0.0;
-
-  var current = {
+    var current = {
     color: 'red'
   };
   var drawing = false;
   var addingParticle = false;
+
+  function Player(xp,yp,zp, xdir, zdir, color, text) {
+
+  }
 
   canvas.addEventListener('mousedown', onMouseDown, false);
   canvas.addEventListener('mouseup', onMouseUp, false);
@@ -75,6 +33,125 @@
   socket.on('updateScene', onUpdateScene); 
 
   window.addEventListener('resize', onResize, false);
+
+  // threejs setup //
+
+  var scene = new THREE.Scene();
+
+  /*
+// A semi-transparent plane to make the background fade
+  var plane = new THREE.Mesh( 
+    new THREE.PlaneGeometry( window.innerWidth, 
+                             window.innerHeight, 8,8 ), 
+    new THREE.MeshBasicMaterial( { 
+      transparent: true,
+      opacity: 0.02,
+      color: 0x000000 } ) );
+  plane.position.z = -500;
+  scene.add(plane);
+  */
+
+  //Light
+
+  var bulbGeometry = new THREE.SphereGeometry( 0.02, 16, 8 );
+  var bulbLight = new THREE.PointLight( 0xffee88, 5, 100, 2 );
+  var bulbMat = new THREE.MeshStandardMaterial( {
+    emissive: 0xffffee,
+    emissiveIntensity: 1,
+    color: 0x000000
+  });
+  bulbLight.add( new THREE.Mesh( bulbGeometry, bulbMat ) );
+  bulbLight.position.set( 0, 0.2, 0 );
+  //bulbLight.castShadow = true;
+  scene.add( bulbLight );
+  var hemiLight = new THREE.HemisphereLight( 0xddeeff, 0x0f0e0d, 0.12 );
+  scene.add( hemiLight );
+
+  var boxGeo = new THREE.BoxGeometry(6, 2, 6);
+  var boxMat = new THREE.MeshStandardMaterial({
+    color:0xffffff,
+    side: THREE.BackSide });
+  var boxMesh = new THREE.Mesh(boxGeo, boxMat);
+  boxMesh.recieveShadow = true;
+  scene.add(boxMesh);
+
+  // Wood floor
+
+  var floorMat = new THREE.MeshStandardMaterial( {
+          roughness: 0.8,
+          color: 0xffffff,
+          metalness: 0.2,
+          bumpScale: 0.0005
+        });
+
+  var textureLoader = new THREE.TextureLoader();
+  textureLoader.load( "textures/hardwood2_diffuse.jpg", function( map ) {
+    map.wrapS = THREE.RepeatWrapping;
+    map.wrapT = THREE.RepeatWrapping;
+    map.anisotropy = 4;
+    map.repeat.set( 10, 24 );
+    floorMat.map = map;
+    floorMat.needsUpdate = true;
+  } );
+  textureLoader.load( "textures/hardwood2_bump.jpg", function( map ) {
+    map.wrapS = THREE.RepeatWrapping;
+    map.wrapT = THREE.RepeatWrapping;
+    map.anisotropy = 4;
+    map.repeat.set( 10, 24 );
+    floorMat.bumpMap = map;
+    floorMat.needsUpdate = true;
+  } );
+  textureLoader.load( "textures/hardwood2_roughness.jpg", function( map ) {
+    map.wrapS = THREE.RepeatWrapping;
+    map.wrapT = THREE.RepeatWrapping;
+    map.anisotropy = 4;
+    map.repeat.set( 10, 24 );
+    floorMat.roughnessMap = map;
+    floorMat.needsUpdate = true;
+  } );
+
+  var floorGeometry = new THREE.PlaneBufferGeometry( 20, 20 );
+  var floorMesh = new THREE.Mesh( floorGeometry, floorMat );
+  floorMesh.receiveShadow = true;
+  floorMesh.rotation.x = -Math.PI / 2.0;
+  floorMesh.position.y = -0.9;
+  scene.add( floorMesh );
+
+  var geometry = new THREE.SphereGeometry( 4, 4, 4 );
+  var material = new THREE.MeshNormalMaterial({depthTest:false});
+  
+  var partMeshes = new THREE.Group();
+  scene.add( partMeshes );
+
+  var camera = new THREE.PerspectiveCamera( 
+    75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+  camera.position.x = 4*(Math.random()-0.5);
+  camera.position.y = 0;
+  camera.position.z = 4*(Math.random()-0.5);
+
+  var renderer = new THREE.WebGLRenderer(
+    { antialias: true } );
+  renderer.setSize( window.innerWidth, window.innerHeight );
+  renderer.physicallyCorrectLights = true;
+  renderer.gammaInput = true;
+  renderer.gammaOutput = true;
+  renderer.shadowMap.enabled = true;
+  renderer.toneMapping = THREE.ReinhardToneMapping;
+  renderer.setPixelRatio( window.devicePixelRatio );
+  document.body.appendChild( renderer.domElement );
+
+  //
+
+  // stores previous particle positions for
+  // smooth interpolation
+  const stateCount = 2;
+  var particleStates = [];
+  for (let i=0; i<stateCount; i++) particleStates.push([]);
+  var stateIndex = 0;
+  var lastStateUpdate = 0.0;
+  var lastStateDelta = 0.0;
+
+
   onResize();
   animate();
 
