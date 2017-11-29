@@ -1,7 +1,6 @@
 
-# Collaborative Galaxy Creator
+# WebVR Chatroom
 
-Click and drag to add particles
 
 ## How to use
 

@@ -35,6 +35,15 @@ function Particle(xp, yp, zp, xv, yv, zv, mass) {
 	this.m = mass;
 }
 
+function Player(xp,yp,zp) {
+    this.x = xp;
+	this.y = yp;
+	this.z = zp;
+	this.r = 0;
+	this.g = 0;
+	this.b = 0;
+}
+
 Particle.prototype.move = function(timestep) {
 	this.x += this.xv*timestep;
 	this.y += this.yv*timestep;
