@@ -3,6 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <title>OurGalaxy</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0, shrink-to-fit=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -19,8 +24,37 @@
   </div>
 -->
 
+  <div id="ui">
+    <div id="vr-button"></div>
+    <a id="magic-window" href="#">Try it without a headset</a>
+  </div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script src="/three.js"></script>
   <script src="/main.js"></script>
+
+    <!--
+    A polyfill for Promises. Needed for IE and Edge.
+  -->
+  <script src="/es6-promise.min.js"></script>
+  <!--
+    VRControls.js acquires positional information from connected VR devices and applies the transformations to a three.js camera object.
+  -->
+  <script src="/VRControls.js"></script>
+
+  <!--
+    VREffect.js handles stereo camera setup and rendering.
+  -->
+  <script src="/VREffect.js"></script>
+
+  <!--
+    A polyfill for WebVR using the Device{Motion,Orientation}Event API.
+  -->
+  <script src="/webvr-polyfill.min.js"></script>
+
+  <!--
+    A set of UI controls for entering VR mode.
+  -->
+  <script src="/webvr-ui.min.js"></script>
 </body>
 </html>

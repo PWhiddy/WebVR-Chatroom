@@ -8,7 +8,11 @@
   ],
   "dependencies": {
     "express": "4.9.x",
-    "socket.io": "latest"
+    "socket.io": "latest",
+    "es6-promise": "latest",
+    "three": "latest",
+    "webvr-polyfill": "latest",
+    "webvr-ui": "latest"
   },
   "scripts": {
     "start": "node index"
