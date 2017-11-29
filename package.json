@@ -1,0 +1,18 @@
+{
+  "name": "OurGalaxy",
+  "version": "0.1.0",
+  "description": "Collaborative Galaxy Builder",
+  "main": "index.js",
+  "keywords": [
+    "socket.io"
+  ],
+  "dependencies": {
+    "express": "4.9.x",
+    "socket.io": "latest"
+  },
+  "scripts": {
+    "start": "node index"
+  },
+  "author": "Peter Whidden",
+  "license": "MIT"
+}
