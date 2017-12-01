@@ -9,7 +9,7 @@ const port = process.env.PORT || 3000;
 app.use(express.static(__dirname + '/public'));
 
 const speedFactor = 0.0001;
-const pMass = 0.00002;
+const pMass = 0.000005;
 const simSpeed = 50;
 const boxRadius = 500;
 var t = Date.now();
@@ -19,6 +19,9 @@ var lastRenderUpdate = 0.0;
 var minPhysicsDelay = (1/60)*1000;
 var minRenderDelay = (1/15)*1000;
 var parts = [];
+
+var players = [];
+
 for (let i=0; i<0; i++) {
 	parts.push(new Particle(
 		Math.random()*400-200, Math.random()*300-150,
@@ -36,13 +39,21 @@ function Particle(xp, yp, zp, xv, yv, zv, mass) {
 }
 
 function Player(xp,yp,zp) {
+	this.myID = 0.0;
+	this.lastUpdate = 0.0;
     this.x = xp;
 	this.y = yp;
 	this.z = zp;
+	this.xdir = 0;
+	this.ydir = 0;
+	this.zdir = 0;
 	this.r = 0;
 	this.g = 0;
 	this.b = 0;
+	this.text = '';
 }
+
+module.exports = Player;
 
 Particle.prototype.move = function(timestep) {
 	this.x += this.xv*timestep;
@@ -103,9 +114,48 @@ function runSim() {
 }
 
 function createParticle(data) {
-  let xv = speedFactor*(data.fx-data.ix);
-  let yv = speedFactor*(data.fy-data.iy);
-  parts.push(new Particle(data.ix, data.iy, 0, xv, yv, 0, pMass));
+  //let xv = speedFactor*(data.fx-data.ix);
+  //let yv = speedFactor*(data.fy-data.iy);
+  parts.push(new Particle(data.x, data.y, data.z, 0.0001*data.dirX,
+                          0.0001*data.dirY, 0.0001*data.dirZ, pMass));
+}
+
+function transmitPlayers() {
+	io.sockets.emit('tramsitPlayers', players);
+}
+
+function updatePlayer(data) {
+	let playerFound = false;
+	for (let p of players) {
+		if (data.id === p.myID) {
+			p.lastUpdate = Date.now();
+			p.x = data.x;
+			p.y = data.y;
+			p.z = data.z;
+			p.xdir = data.dirx;
+			p.ydir = data.diry;
+			p.zdir = data.dirz;
+			playerFound = true;
+		}
+	}
+	if (!playerFound) {
+		let p = new Player(data.x,data.y,data.z);
+		p.myID = data.id;
+		p.lastUpdate = Date.now();
+		p.xdir = data.dirx;
+		p.ydir = data.diry;
+		p.zdir = data.dirz;
+		players.push(p);
+	}
+	//transmitPlayers();
+}
+
+function disconnect() {
+	for (let i=0; i <players.length; i++) {
+		if (Date.now()-players[i].lastUpdate > 7000) {
+			players.splice(i, 1);
+		}
+	}
 }
 
 function onConnection(socket) {
@@ -115,7 +165,11 @@ function onConnection(socket) {
   socket.on('addParticle', data => createParticle(data) );
   //socket.on('drawing', (data) => socket.broadcast.emit('drawing', data));
 
-  setInterval(runSim, 15);
+  socket.on('updatePlayer', data => updatePlayer(data));
+
+  setInterval(transmitPlayers, 15);
+  setInterval(disconnect, 1000);
+  //setInterval(runSim, 15);
 
 }
 

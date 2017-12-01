@@ -33,6 +33,17 @@
   //DIRTY_SUBMIT_FRAME_BINDINGS: true // default: false
   };
 
+  var vrDisplay;
+
+  var downKey = false;
+  var upKey = false;
+  var leftKey = false;
+  var rightKey = false;
+
+  var currentText = '';
+
+  var frameCount = 0;
+  var myID = Math.random()*Date.now();
 
   var socket = io();
   var canvas = document.getElementsByClassName('whiteboard')[0];
@@ -46,14 +57,14 @@
   var drawing = false;
   var addingParticle = false;
 
-  function Player(xp,yp,zp, xdir, zdir, color, text) {
-
-  }
 
   canvas.addEventListener('mousedown', onMouseDown, false);
   canvas.addEventListener('mouseup', onMouseUp, false);
   canvas.addEventListener('mouseout', onMouseUp, false);
   canvas.addEventListener('mousemove', throttle(onMouseMove, 10), false);
+  window.addEventListener('keydown', keyDown);
+  window.addEventListener('keyup', keyUp);
+  window.addEventListener('vrdisplaypresentchange', onResize, true);
 
   for (var i = 0; i < colors.length; i++){
     colors[i].addEventListener('click', onColorUpdate, false);
@@ -61,7 +72,8 @@
 
   socket.on('drawing', onDrawingEvent);
 
-  socket.on('updateScene', onUpdateScene); 
+  //socket.on('updateScene', onUpdateScene); 
+  socket.on('tramsitPlayers', onUpdatePlayers);
 
   window.addEventListener('resize', onResize, false);
 
@@ -92,7 +104,7 @@
     color: 0x000000
   });
   bulbLight.add( new THREE.Mesh( bulbGeometry, bulbMat ) );
-  bulbLight.position.set( 0, 0.2, 0 );
+  bulbLight.position.set( 0, 0.1, 0 );
   //bulbLight.castShadow = true;
   scene.add( bulbLight );
   var hemiLight = new THREE.HemisphereLight( 0xddeeff, 0x0f0e0d, 0.12 );
@@ -148,21 +160,27 @@
   floorMesh.position.y = -0.9;
   scene.add( floorMesh );
 
-  var geometry = new THREE.SphereGeometry( 4, 4, 4 );
-  var material = new THREE.MeshNormalMaterial({depthTest:false});
+  var geometry = new THREE.SphereGeometry( 0.02, 0.02, 0.02 );
+  var material = new THREE.MeshStandardMaterial({color:0xff2243});
   
   var partMeshes = new THREE.Group();
   scene.add( partMeshes );
 
+  var playerMeshes = new THREE.Group();
+  scene.add( playerMeshes);
+
   var camera = new THREE.PerspectiveCamera( 
     75, window.innerWidth/window.innerHeight, 0.1, 1000 );
-  camera.position.x = 4*(Math.random()-0.5);
+  camera.position.x = 3*(Math.random()-1.0);
   camera.position.y = 0;
-  camera.position.z = 4*(Math.random()-0.5);
+  camera.position.z = 3*(Math.random()-1.0);
+
+  var controls = new THREE.VRControls(camera);
+  controls.standing = true;
 
   var renderer = new THREE.WebGLRenderer(
     { antialias: true } );
-  renderer.setSize( window.innerWidth, window.innerHeight );
+  //renderer.setSize( window.innerWidth, window.innerHeight );
   renderer.physicallyCorrectLights = true;
   renderer.gammaInput = true;
   renderer.gammaOutput = true;
@@ -171,25 +189,66 @@
   renderer.setPixelRatio( window.devicePixelRatio );
   document.body.appendChild( renderer.domElement );
 
-  //
+    // Apply VR stereo rendering to renderer.
+  var effect = new THREE.VREffect(renderer);
+  effect.setSize(window.innerWidth, window.innerHeight);
+
+  // Initialize the WebVR UI.
+  var uiOptions = {
+    color: 'black',
+    background: 'white',
+    corners: 'square'
+  };
+  var vrButton = new webvrui.EnterVRButton(renderer.domElement, uiOptions);
+  vrButton.on('exit', function() {
+    camera.quaternion.set(0, 0, 0, 1);
+    camera.position.set(0, controls.userHeight, 0);
+  });
+  vrButton.on('hide', function() {
+    document.getElementById('ui').style.display = 'none';
+  });
+  vrButton.on('show', function() {
+    document.getElementById('ui').style.display = 'inherit';
+  });
+  document.getElementById('vr-button').appendChild(vrButton.domElement);
+  document.getElementById('magic-window').addEventListener('click', function() {
+    vrButton.requestEnterFullscreen();
+  });
 
   // stores previous particle positions for
   // smooth interpolation
-  const stateCount = 2;
+  const stateCount = 1;
+  var playerStates = [];
+  for (let i=0; i<stateCount; i++) playerStates.push([]);
+
   var particleStates = [];
   for (let i=0; i<stateCount; i++) particleStates.push([]);
   var stateIndex = 0;
   var lastStateUpdate = 0.0;
   var lastStateDelta = 0.0;
 
-
+  setupStage();
   onResize();
   animate();
 
   function animate() {
 
+    if (leftKey) camera.rotation.y += 0.015;
+    if (rightKey) camera.rotation.y -= 0.015;
+    let camDir = new THREE.Vector3();
+    camera.getWorldDirection(camDir);
+    camDir = camDir.multiplyScalar(0.015);
+    if (upKey) camera.position.add(camDir);
+    if (downKey) camera.position.sub(camDir);
+    if (camera.position.x > 3.5) camera.position.x -= 0.015;
+    if (camera.position.x <-3.5) camera.position.x += 0.015;
+    if (camera.position.z > 3.5) camera.position.z -= 0.015;
+    if (camera.position.z <-3.5) camera.position.z += 0.015;
+
+
     requestAnimationFrame(animate);
 
+    /*
     for (let i=0; i<particleStates[stateIndex].length; i++) {
       let pos = partMeshes.children[i].position;
       // grab particles current position, as well as previous
@@ -211,8 +270,66 @@
       pos.y = (1.0-portion)*a.y+portion*b.y;
       pos.z = (1.0-portion)*a.z+portion*b.z;
     }
+    */
 
-    renderer.render( scene, camera );
+    console.log(playerStates[stateIndex].length)
+
+    for (let i=0; i<playerStates[stateIndex].length; i++) {
+      let pos = playerMeshes.children[i].position;
+      let rot = playerMeshes.children[i].rotation;
+      let a = playerStates[stateIndex][i];
+      let b = playerStates[(stateIndex+stateCount-1)%stateCount][i];
+      let portion = (Date.now()-lastStateUpdate)/lastStateDelta;
+
+      pos.x = (1.0-portion)*a.x+portion*b.x;
+      pos.y = (1.0-portion)*a.y+portion*b.y;
+      pos.z = (1.0-portion)*a.z+portion*b.z;
+      // Same for rot?
+
+    }
+    
+    // Only update controls if we're presenting.
+    if (vrButton.isPresenting()) {
+      controls.update();
+    }
+    // Render the scene.
+    effect.render(scene, camera);
+    //vrDisplay.requestAnimationFrame(animate);
+
+    //renderer.render( scene, camera );
+    frameCount++;
+
+    if (frameCount % 15 === 0) {
+      updatePlayer();
+
+      let dir = new THREE.Vector3();
+      camera.getWorldDirection(dir);
+      let dirX = dir.x;
+      let dirY = dir.y;
+      let dirZ = dir.z;
+      console.log(playerStates[stateIndex]);
+      // emit updated position
+    }
+
+  }
+
+/*
+  function getMyPos() {
+    return {camera.position.x, camera.position.y, camera.position.z};
+  }
+*/
+
+  function makePlayerMesh(color) {
+    let mat = new THREE.MeshStandardMaterial({color:color});
+    let geo = new THREE.SphereGeometry(0.2, 32, 32);
+    return new THREE.Mesh(geo,mat);
+  }
+
+  function getMyDir() {
+    let v = new THREE.Vector3();
+    let cam = camera.getWorldDirection(v)
+    let vflat = new THREE.Vector2(v.x, v.z);
+    return vflat.normalize();
   }
 
   function drawLine(x0, y0, x1, y1, color, emit){
@@ -252,10 +369,10 @@
     //drawLine(current.x, current.y, e.clientX, e.clientY, current.color, true);
     if (!addingParticle) { return; }
     addingParticle = false;
-    addParticle(current.x-window.innerWidth/2,
+    /*addParticle(current.x-window.innerWidth/2,
                -current.y+window.innerHeight/2,
                 e.clientX-window.innerWidth/2,
-               -e.clientY+window.innerHeight/2);
+               -e.clientY+window.innerHeight/2);*/
     context.clearRect(0,0,canvas.width, canvas.height);
 
   }
@@ -275,6 +392,28 @@
     current.color = e.target.className.split(' ')[1];
   }
 
+  function keyDown(e) {
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' ||
+      e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (e.key === 'ArrowLeft')  leftKey = true;
+      if (e.key === 'ArrowRight') rightKey = true;
+      if (e.key === 'ArrowDown')  downKey = true;
+      if (e.key === 'ArrowUp')    upKey = true;
+    }
+  }
+
+  function keyUp(e) {
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' ||
+      e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (e.key === 'ArrowLeft')  leftKey = false;
+      if (e.key === 'ArrowRight') rightKey = false;
+      if (e.key === 'ArrowDown')  downKey = false;
+      if (e.key === 'ArrowUp')    upKey = false;
+    }
+  }
+
   // limit the number of events per second
   function throttle(callback, delay) {
     var previousCall = new Date().getTime();
@@ -289,14 +428,44 @@
   }
 
   function addParticle(ix, iy, fx, fy) {
+    let x = camera.position.x;
+    let y = camera.position.y;
+    let z = camera.position.z;
+    let dir = new THREE.Vector3();
+    camera.getWorldDirection(dir);
+    let dirX = dir.x;
+    let dirY = dir.y;
+    let dirZ = dir.z;
     socket.emit('addParticle', 
       {
-        ix, iy,
-        fx, fy,
+        x, y, z,
+        dirX, dirY, dirZ
      //   current.color
       });
   }
 
+  function updatePlayer() {
+    let x = camera.position.x;
+    let y = camera.position.y;
+    let z = camera.position.z;
+    let dir = new THREE.Vector3();
+    camera.getWorldDirection(dir);
+    let dirX = dir.x;
+    let dirY = dir.y;
+    let dirZ = dir.z;
+    socket.emit('updatePlayer', 
+      {
+        id:myID,
+        x:x,
+        y:y,
+        z:z,
+        dirx:dirX,
+        diry:dirY,
+        dirz:dirZ
+      });
+  }
+
+/*
   function onUpdateScene(parts) {
 
     particleStates[stateIndex] = parts;
@@ -313,6 +482,47 @@
     lastStateDelta = Date.now()-lastStateUpdate;
     lastStateUpdate = Date.now();
 
+  }
+  */
+
+  function onUpdatePlayers(players){
+
+    playerStates[stateIndex] = players;
+    // Add new particles to old state
+    for (let s of playerStates) {
+      if (s.length < players.length) fillPlayers(s, players);
+    }
+
+    while (players.length > playerMeshes.children.length ) {
+      playerMeshes.add( makePlayerMesh(0xffff00) );
+    }
+
+    stateIndex = (stateIndex + 1)%stateCount;
+    lastStateDelta = Date.now()-lastStateUpdate;
+    lastStateUpdate = Date.now();
+  }
+
+  // Get the HMD, and if we're dealing with something that specifies
+  // stageParameters, rearrange the scene.
+  function setupStage() {
+    navigator.getVRDisplays().then(function(displays) {
+      if (displays.length > 0) {
+            console.log(vrDisplay);
+        vrDisplay = displays[0];
+        if (vrDisplay.stageParameters) {
+          //setStageDimensions(vrDisplay.stageParameters);
+        }
+        vrDisplay.requestAnimationFrame(animate);
+      }
+    });
+  }
+
+  function fillPlayers(s, players) {
+    let i = s.length;
+    while (i<players.length) {
+      s.push(players[i]);
+      i++;
+    }
   }
 
   function fillState(s, parts) {
@@ -333,6 +543,9 @@
   function onResize() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+    effect.setSize(window.innerWidth, window.innerHeight);
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
   }
 
 })();

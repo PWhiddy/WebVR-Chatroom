@@ -12,7 +12,12 @@
 </head>
 <body>
 
-  <canvas class="whiteboard" ></canvas>
+  <canvas class="whiteboard" >
+    <div id="ui">
+    <div id="vr-button"></div>
+    <a id="magic-window" href="#">Try it without a headset</a>
+  </div>
+  </canvas>
 
 <!--
   <div class="colors">
@@ -24,20 +29,15 @@
   </div>
 -->
 
-  <div id="ui">
-    <div id="vr-button"></div>
-    <a id="magic-window" href="#">Try it without a headset</a>
-  </div>
+
+  <!--
+    A set of UI controls for entering VR mode.
+  -->
+  <script src="/webvr-ui.min.js"></script>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/three.js"></script>
-  <script src="/main.js"></script>
-
-    <!--
-    A polyfill for Promises. Needed for IE and Edge.
-  -->
-  <script src="/es6-promise.min.js"></script>
-  <!--
+   <!--
     VRControls.js acquires positional information from connected VR devices and applies the transformations to a three.js camera object.
   -->
   <script src="/VRControls.js"></script>
@@ -47,14 +47,17 @@
   -->
   <script src="/VREffect.js"></script>
 
+    <!--
+    A polyfill for Promises. Needed for IE and Edge.
+  -->
+  <script src="/es6-promise.min.js"></script>
+ 
+
   <!--
     A polyfill for WebVR using the Device{Motion,Orientation}Event API.
   -->
   <script src="/webvr-polyfill.min.js"></script>
+  <script src="/main.js"></script>
 
-  <!--
-    A set of UI controls for entering VR mode.
-  -->
-  <script src="/webvr-ui.min.js"></script>
 </body>
 </html>
