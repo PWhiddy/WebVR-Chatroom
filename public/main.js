@@ -96,17 +96,22 @@
 
   //Light
 
-  var bulbGeometry = new THREE.SphereGeometry( 0.02, 16, 8 );
-  var bulbLight = new THREE.PointLight( 0xffee88, 5, 100, 2 );
-  var bulbMat = new THREE.MeshStandardMaterial( {
-    emissive: 0xffffee,
-    emissiveIntensity: 1,
-    color: 0x000000
-  });
-  bulbLight.add( new THREE.Mesh( bulbGeometry, bulbMat ) );
-  bulbLight.position.set( 0, 0.1, 0 );
-  //bulbLight.castShadow = true;
-  scene.add( bulbLight );
+  var lights = new THREE.Group();
+
+  for (let i=0; i<4; i++) {
+    var bulbGeometry = new THREE.SphereGeometry( 0.02, 16, 8 );
+    var bulbLight = new THREE.PointLight( 0xffee88, 5, 100, 2 );
+    var bulbMat = new THREE.MeshStandardMaterial( {
+      emissive: 0xffffee,
+      emissiveIntensity: 1,
+      color: 0x000000
+    });
+    bulbLight.add( new THREE.Mesh( bulbGeometry, bulbMat ) );
+    bulbLight.position.set( Math.sin(0.5*i*Math.PI), 0.1, Math.cos(0.5*i*Math.PI) );
+    //bulbLight.castShadow = true;
+    lights.add( bulbLight );
+  }
+  scene.add(lights);
   var hemiLight = new THREE.HemisphereLight( 0xddeeff, 0x0f0e0d, 0.12 );
   scene.add( hemiLight );
 
@@ -245,6 +250,7 @@
     if (camera.position.z > 3.5) camera.position.z -= 0.015;
     if (camera.position.z <-3.5) camera.position.z += 0.015;
 
+    lights.rotation.y += 0.02;
 
     requestAnimationFrame(animate);
 
@@ -275,9 +281,13 @@
     //console.log(playerStates[stateIndex].length)
 
     for (let i=0; i<playerStates[stateIndex].length; i++) {
-      let pos = playerMeshes.children[i].position;
-      let rot = playerMeshes.children[i].rotation;
+      let cur = playerMeshes.children[i];
+      let pos = cur.position;
+      let rot = cur.rotation;
       let a = playerStates[stateIndex][i];
+      if (playerStates[stateIndex][i].myID === myID) {
+        cur.visible = false;
+      }
       let b = playerStates[(stateIndex+stateCount-1)%stateCount][i];
       let portion = (Date.now()-lastStateUpdate)/lastStateDelta;
 
@@ -325,7 +335,20 @@
   function makePlayerMesh(color) {
     let mat = new THREE.MeshStandardMaterial({color:color});
     let geo = new THREE.SphereGeometry(0.2, 32, 32);
-    return new THREE.Mesh(geo,mat);
+    let m = new THREE.Mesh(geo,mat) 
+    
+    let eyeMat = new THREE.MeshStandardMaterial({color:0xffffff});
+    let eyeGeo = new THREE.SphereGeometry(0.1, 10, 10);
+    let lEye = new THREE.Mesh(eyeGeo, eyeMat);
+    let rEye = new THREE.Mesh(eyeGeo, eyeMat);
+    lEye.position.y += 0.16;
+    lEye.position.z += 0.16;
+    rEye.position.y += 0.16;
+    rEye.position.z -= 0.16;
+    m.add(lEye);
+    m.add(rEye);
+
+    return m;
   }
 
   function getMyDir() {
