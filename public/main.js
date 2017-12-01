@@ -272,7 +272,7 @@
     }
     */
 
-    console.log(playerStates[stateIndex].length)
+    //console.log(playerStates[stateIndex].length)
 
     for (let i=0; i<playerStates[stateIndex].length; i++) {
       let pos = playerMeshes.children[i].position;
@@ -281,9 +281,12 @@
       let b = playerStates[(stateIndex+stateCount-1)%stateCount][i];
       let portion = (Date.now()-lastStateUpdate)/lastStateDelta;
 
-      pos.x = (1.0-portion)*a.x+portion*b.x;
-      pos.y = (1.0-portion)*a.y+portion*b.y;
-      pos.z = (1.0-portion)*a.z+portion*b.z;
+      let dir = a.sub(pos);
+      dir = dir.normalize();
+      pos.add(dir.multiplyScalar(0.015));
+      //pos.x = (1.0-portion)*a.x+portion*b.x;
+      //pos.y = (1.0-portion)*a.y+portion*b.y;
+      //pos.z = (1.0-portion)*a.z+portion*b.z;
       // Same for rot?
 
     }
