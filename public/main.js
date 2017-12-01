@@ -176,9 +176,9 @@
 
   var camera = new THREE.PerspectiveCamera( 
     75, window.innerWidth/window.innerHeight, 0.1, 1000 );
-  camera.position.x = 3*(Math.random()-1.0);
+  camera.position.x = -3*(Math.random()-1.0);
   camera.position.y = 0;
-  camera.position.z = 3*(Math.random()-1.0);
+  camera.position.z = -3*(Math.random()-1.0);
 
   var controls = new THREE.VRControls(camera);
   controls.standing = true;
@@ -334,17 +334,29 @@
 
   function makePlayerMesh(color) {
     let mat = new THREE.MeshStandardMaterial({color:color});
-    let geo = new THREE.SphereGeometry(0.2, 32, 32);
+    let geo = new THREE.SphereGeometry(0.2, 50, 50);
     let m = new THREE.Mesh(geo,mat) 
     
     let eyeMat = new THREE.MeshStandardMaterial({color:0xffffff});
-    let eyeGeo = new THREE.SphereGeometry(0.1, 10, 10);
+    let eyeGeo = new THREE.SphereGeometry(0.1, 32, 32);
     let lEye = new THREE.Mesh(eyeGeo, eyeMat);
     let rEye = new THREE.Mesh(eyeGeo, eyeMat);
-    lEye.position.y += 0.16;
-    lEye.position.z += 0.16;
-    rEye.position.y += 0.16;
-    rEye.position.z -= 0.16;
+    let pupilMat = new THREE.MeshStandardMaterial({color:0x000000});
+    let pupilGeo = new THREE.SphereGeometry(0.05, 16, 16);
+    let lPupil = new THREE.Mesh(pupilGeo, pupilMat);
+    let rPupil = new THREE.Mesh(pupilGeo, pupilMat);
+    lPupil.position.z += 0.055;
+    rPupil.position.z += 0.055;
+    lEye.add(lPupil);
+    rEye.add(rPupil);
+
+    lEye.position.y += 0.1;
+    lEye.position.x += 0.12;
+    lEye.position.z += 0.085;
+
+    rEye.position.y += 0.1;
+    rEye.position.x -= 0.12;
+    rEye.position.z += 0.085;
     m.add(lEye);
     m.add(rEye);
 
