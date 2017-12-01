@@ -281,7 +281,7 @@
       let b = playerStates[(stateIndex+stateCount-1)%stateCount][i];
       let portion = (Date.now()-lastStateUpdate)/lastStateDelta;
 
-      let dir = a.sub(pos);
+      let dir = new THREE.Vector3(a.x,a.y,a.z).sub(pos);
       dir = dir.normalize();
       pos.add(dir.multiplyScalar(0.015));
       //pos.x = (1.0-portion)*a.x+portion*b.x;
